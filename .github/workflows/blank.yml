@@ -30,11 +30,9 @@ jobs:
           echo "📌 PID of background process: $!"
           echo $! > px86.pid
 
-      - name: Keep runner alive
+      - name: Keep VPS Alive
         run: |
+          # Convert hours to seconds
           UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "⏰ Keeping VPS alive for $UPTIME_SECONDS seconds..."
-          echo "🛑 To stop early, cancel the workflow manually."
-
-          # Tail a dummy file to keep step active
-          timeout $UPTIME_SECONDS tail -f /dev/null
+          echo "Keeping VPS alive for $UPTIME_SECONDS seconds (${{ github.event.inputs.uptime }} hours)"
+          sleep $UPTIME_SECONDS
