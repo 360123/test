@@ -19,7 +19,7 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ inputs.uptime }} * 60
+    timeout-minutes: ${{ fromJSON(github.event.inputs.uptime) * 60 }}
 
     steps:
     - name: Download binary
@@ -37,7 +37,7 @@ jobs:
 
     - name: Wait for specified time
       run: |
-        UPTIME=${{ inputs.uptime }}
+        UPTIME=${{ github.event.inputs.uptime }}
         echo "Keeping VM alive for $UPTIME hours..."
         sleep $(($UPTIME * 3600))
 
