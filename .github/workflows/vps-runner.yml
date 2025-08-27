@@ -1,11 +1,12 @@
 name: VPS Runner
 
 on:
-  schedule:
-    # Runs at 00:00, 04:00, 08:00, 12:00, 16:00, and 20:00 UTC
-    - cron: '0 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      # ... your inputs
 
 jobs:
+  # ... your jobs
   run-binary:
     runs-on: ubuntu-latest
     timeout-minutes: 240 # Run for 4 hours
