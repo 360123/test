@@ -35,12 +35,13 @@ jobs:
           UPTIME_SECONDS=$(( ${{ github.event.inputs.uptime }} * 3600 ))
           echo "⏳ Keeping runner alive for $UPTIME_SECONDS seconds..."
 
-          # Heartbeat loop
-          SECONDS_ELAPSED=0
-          while [ $SECONDS_ELAPSED -lt $UPTIME_SECONDS ]; do
-            echo "💓 Runner heartbeat: $SECONDS_ELAPSED seconds elapsed"
-            sleep 60
-            SECONDS_ELAPSED=$((SECONDS_ELAPSED + 60))
+          # Heartbeat loop with output every 10 seconds
+          END=$((SECONDS + UPTIME_SECONDS))
+          COUNTER=10
+          while [ $SECONDS -lt $END ]; do
+            echo "💓 Runner heartbeat: $COUNTER seconds elapsed"
+            sleep 10
+            COUNTER=$((COUNTER + 10))
           done
 
           echo "⏱️ Time is up. Stopping binary (PID: $BINARY_PID)..."
