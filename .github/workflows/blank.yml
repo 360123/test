@@ -19,8 +19,6 @@ on:
 jobs:
   run-binary:
     runs-on: ubuntu-latest
-    # Set a fixed maximum timeout (6 hours = 360 minutes)
-    timeout-minutes: 360
 
     steps:
     - name: Download binary
